@@ -21,6 +21,15 @@ To install the package and its dependencies, use the following command:
 pip install sceneprogllm
 ```
 
+For proper usage, export the respective variables
+```
+export OPENAI_API_KEY= YOUR_OPENAI_API_KEY
+export AWS_ACCESS_KEY= YOUR_AWS_ACCESS_KEY
+export AWS_SECRET_KEY= YOUR_AWS_SECRET_KEY
+export AWS_REGION = AWS_REGION
+export AWS_S3_BUCKET= AWS_S3_BUCKET
+```
+
 ## **Getting Started**
 Importing the Package
 ```
