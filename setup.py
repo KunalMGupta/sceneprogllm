@@ -7,7 +7,7 @@ setup(
     long_description_content_type='text/markdown',
     author='Kunal Gupta',
     author_email='k5upta@ucsd.edu',
-    # url='https://github.com/yourusername/my_package',  # Optional: Replace with your repo URL
+    url='https://github.com/KunalMGupta/sceneprogllm.git',  # Optional: Replace with your repo URL
     packages=find_packages(),  # Automatically find all packages in your project
     classifiers=[
         'Programming Language :: Python :: 3',
