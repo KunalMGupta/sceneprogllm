@@ -9,8 +9,8 @@ Key features
 '''
 import os
 from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser, SimpleJsonOutputParser
+from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
+from langchain_core.output_parsers import StrOutputParser, SimpleJsonOutputParser, CommaSeparatedListOutputParser, PydanticOutputParser
 from .cache_manager import CacheManager
 from .image_helper import ImageHelper
 from .text2img import text2imgSD, text2imgOpenAI
@@ -28,7 +28,7 @@ class LLM:
                  no_cache=True,
                  image_generator='SD'):
         
-        assert response_format in ['text', 'code', 'json', 'image'], "Invalid response format, must be one of 'text', 'code', 'json', 'image'"
+        assert response_format in ['text', 'list', 'code', 'json', 'image', 'pydantic'], "Invalid response format, must be one of 'text', 'list', 'code', 'json', 'image', 'pydantic'"
         self.name=name
         self.response_format = response_format
         self.image_detail=image_detail
@@ -49,7 +49,7 @@ class LLM:
         self.model = ChatOpenAI(
             model='gpt-4o' if not fast else "gpt-4o-mini",
             api_key=os.getenv('OPENAI_API_KEY'),
-            model_kwargs={"response_format": self.response_format_config},
+            # model_kwargs={"response_format": self.response_format_config},
         )
 
         # Initial system message and prompt template
@@ -66,8 +66,11 @@ class LLM:
                 ("human", "{input}")
             ])
 
-    def run(self, query, image_paths=None):
+    def run(self, query, image_paths=None, pydantic_object=None):
 
+        if self.response_format == "pydantic":
+            assert pydantic_object, "Pydantic object is required for response format 'pydantic'"
+            
         if self.response_format == "image":
             return self.text2img(query)
 
@@ -86,6 +89,16 @@ class LLM:
         # Define the chain based on the response format
         if self.response_format == "json":
             chain = self.prompt_template | self.model | SimpleJsonOutputParser()
+        elif self.response_format == "list":
+            chain = self.prompt_template | self.model | CommaSeparatedListOutputParser()
+        elif self.response_format == "pydantic":
+            parser = PydanticOutputParser(pydantic_object=pydantic_object)
+            self.prompt_template = PromptTemplate(
+                                                template="Answer the user query.\n{format_instructions}\n{input}\n",
+                                                input_variables=["input"],
+                                                partial_variables={"format_instructions": parser.get_format_instructions()},
+                                            )
+            chain = self.prompt_template | self.model | parser
         else:
             chain = self.prompt_template | self.model | StrOutputParser()
         
@@ -102,6 +115,11 @@ class LLM:
 ```python
 ....
 ```"""
+
+        if self.response_format == "list":
+            full_prompt += """Return a comma separated list of items, e.g.:
+item1, item2, item3
+"""
         # Invoke the model and get the response
         if self.image_input:
             assert len(image_paths) == self.num_images, f"Number of images should be {self.num_images}."
