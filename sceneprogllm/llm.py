@@ -28,7 +28,8 @@ class LLM:
                  debug_code=True,
                  no_cache=True,
                  image_generator='SD',
-                 use_ollama=False):
+                 use_ollama=False,
+                 ollama_model_name='llama3.2-vision'):
         assert response_format in ['text', 'list', 'code', 'json', 'image', 'pydantic'], "Invalid response format, must be one of 'text', 'list', 'code', 'json', 'image', 'pydantic'"
         self.name=name
         self.response_format = response_format
@@ -48,7 +49,7 @@ class LLM:
 
         # Initialize the model with the given configuration
         if use_ollama:
-            self.model = ChatOllama(model='llama3.2-vision', temperature=1)
+            self.model = ChatOllama(model=ollama_model_name, temperature=1)
         else:
             self.model = ChatOpenAI(
                 model='gpt-4o' if not fast else "gpt-4o-mini",

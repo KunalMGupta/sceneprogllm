@@ -82,7 +82,11 @@ clear_llm_cache()
 
 ### **Using Ollama**
 
-To use Ollama with the `LLM` class, you need to set the `use_ollama` parameter to `True` when initializing the `LLM` object. Here is an example:
+To use Ollama with the `LLM` class, you need to set the `use_ollama` parameter to `True` when initializing the `LLM` object. 
+
+Furthermore, you can specify the Ollama Model via `ollama_model_name`, the default is `"llama3.2-vision"`. See [Ollama model site](https://ollama.com/search) for the available options. Note that different model will support different modes (text, image, etc.).
+
+Here is an example:
 
 ```python
 from sceneprogllm import LLM
