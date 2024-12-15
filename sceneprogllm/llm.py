@@ -11,6 +11,7 @@ import os
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
 from langchain_core.output_parsers import StrOutputParser, SimpleJsonOutputParser, CommaSeparatedListOutputParser, PydanticOutputParser
+from langchain_ollama import ChatOllama
 from .cache_manager import CacheManager
 from .image_helper import ImageHelper
 from .text2img import text2imgSD, text2imgOpenAI
@@ -26,8 +27,8 @@ class LLM:
                  json_keys=None,
                  debug_code=True,
                  no_cache=True,
-                 image_generator='SD'):
-        
+                 image_generator='SD',
+                 use_ollama=False):
         assert response_format in ['text', 'list', 'code', 'json', 'image', 'pydantic'], "Invalid response format, must be one of 'text', 'list', 'code', 'json', 'image', 'pydantic'"
         self.name=name
         self.response_format = response_format
@@ -46,11 +47,14 @@ class LLM:
             self.response_format_config = {"type": "text"}
 
         # Initialize the model with the given configuration
-        self.model = ChatOpenAI(
-            model='gpt-4o' if not fast else "gpt-4o-mini",
-            api_key=os.getenv('OPENAI_API_KEY'),
-            # model_kwargs={"response_format": self.response_format_config},
-        )
+        if use_ollama:
+            self.model = ChatOllama(model='llama3.2-vision', temperature=1)
+        else:
+            self.model = ChatOpenAI(
+                model='gpt-4o' if not fast else "gpt-4o-mini",
+                api_key=os.getenv('OPENAI_API_KEY'),
+                # model_kwargs={"response_format": self.response_format_config},
+            )
 
         # Initial system message and prompt template
         self.system_desc = system_desc or "You are a helpful assistant."
