@@ -17,12 +17,12 @@
 
 ## **Installation**
 To install the package and its dependencies, use the following command:
-```
+```bash
 pip install sceneprogllm
 ```
 
 For proper usage, export the respective variables
-```
+```bash
 export OPENAI_API_KEY= YOUR_OPENAI_API_KEY
 export AWS_ACCESS_KEY= YOUR_AWS_ACCESS_KEY
 export AWS_SECRET_KEY= YOUR_AWS_SECRET_KEY
@@ -32,19 +32,19 @@ export AWS_S3_BUCKET= AWS_S3_BUCKET
 
 ## **Getting Started**
 Importing the Package
-```
+```python
 from sceneprogllm import LLM
 ```
 
 ## **Usage Examples**
 1. **Generating Text Responses**
-```
+```python
 llm = LLM(name="text_bot", response_format="text")
 response = llm.run("What is the capital of France?")
 print(response)
 ```
 2. **Generating JSON Responses**
-```
+```python
 llm = LLM(
     name="json_bot",
     response_format="json",
@@ -55,26 +55,38 @@ response = llm.run(query)
 print(response)
 ```
 3. **Generating Python Code**
-```
+```python
 llm = LLM(name="code_bot", response_format="code")
 query = "Write a Python function to calculate factorial of a number."
 response = llm.run(query)
 print(response)
 ```
 4. **Generating images from text**
-```
+```python
 llm = LLM(name="image_bot", response_format="image")
 response = llm.run("Generate an image of a futuristic cityscape.")
 response.save("futuristic_city.jpg")
 ```
 5. **Query using Images**
-```
+```python
 llm = LLM(name="image_bot", response_format="text", num_images=1, image_generator="SD")
 image_paths = ["path/to/input_image.jpg"]
 response = llm.run("What is the color of the object in the image?", image_paths=image_paths)
 ```
 6. **Clear LLM cache**
-```
+```python
 from sceneprogllm import clear_llm_cache
 clear_llm_cache()
-```# sceneprogllm
+```
+
+
+### **Using Ollama**
+
+To use Ollama with the `LLM` class, you need to set the `use_ollama` parameter to `True` when initializing the `LLM` object. Here is an example:
+
+```python
+from sceneprogllm import LLM
+
+# Example for generating text responses using Ollama
+llm = LLM(name="text_bot", response_format="text", use_ollama=True)
+```
