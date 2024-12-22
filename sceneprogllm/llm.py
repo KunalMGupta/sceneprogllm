@@ -29,7 +29,8 @@ class LLM:
                  no_cache=True,
                  image_generator='SD',
                  use_ollama=False,
-                 ollama_model_name='llama3.2-vision'):
+                 ollama_model_name='llama3.2-vision',
+                 use_local_image=True):
         assert response_format in ['text', 'list', 'code', 'json', 'image', 'pydantic'], "Invalid response format, must be one of 'text', 'list', 'code', 'json', 'image', 'pydantic'"
         self.name=name
         self.response_format = response_format
@@ -40,6 +41,7 @@ class LLM:
         self.debug_code = debug_code
         self.cache = CacheManager(self.name, no_cache)
         self.text2img = text2imgSD if image_generator == 'SD' else text2imgOpenAI
+        self.use_local_image = use_local_image
     
         # Configure the response format
         if self.response_format == "json":
@@ -63,7 +65,7 @@ class LLM:
         if self.image_input:
             self.image_helper = ImageHelper(self.system_desc, num_images, image_detail)
             self.prompt_template = ChatPromptTemplate.from_messages(
-            messages= self.image_helper.prepare_image_prompt_template()
+                messages = self.image_helper.prepare_image_prompt_template()
             )
         else:
             self.prompt_template = ChatPromptTemplate.from_messages([
@@ -127,9 +129,12 @@ item1, item2, item3
 """
         # Invoke the model and get the response
         if self.image_input:
-            assert len(image_paths) == self.num_images, f"Number of images should be {self.num_images}."
-            image_paths = self.image_helper.upload_images_to_s3(image_paths)
-            result = self.image_helper.invoke_image_prompt_template(chain, full_prompt, image_paths)
+            if self.use_local_image:
+                result = self.image_helper.native_invoke_image_prompt_template(chain, full_prompt, image_paths)
+            else:
+                assert len(image_paths) == self.num_images, f"Number of images should be {self.num_images}."
+                image_paths = self.image_helper.upload_images_to_s3(image_paths)
+                result = self.image_helper.invoke_image_prompt_template(chain, full_prompt, image_paths)
         else:
             result = chain.invoke({"input": full_prompt})
         
