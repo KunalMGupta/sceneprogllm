@@ -168,13 +168,25 @@ class ImageHelper:
         to_invoke = {"input": prompt, "detail_parameter": self.image_detail}
 
         for i in range(self.num_images):
-            image_data = base64.b64encode(open(image_paths[i], "rb").read()).decode("utf-8")
-            image_urls.append({"type": "image_url", "image_url": {"url": f"data:image/jpg; base64,{{image_url{i+1}}}"}})
+            with open(image_paths[i], "rb") as image_file:
+                image_data = base64.b64encode(image_file.read()).decode("utf-8")
             to_invoke[f"image_data{i+1}"] = image_data
-            to_invoke[f"image_path{i+1}"] = image_paths[i]
         
-        to_invoke["user"] = image_urls
-        return chain.invoke(to_invoke)        
+        return chain.invoke(to_invoke)    
+
+    def native_prepare_image_prompt_template(self):
+        messages = [
+            ChatPromptTemplate.from_messages([
+                ("system", self.system_desc),
+                ("human", "{input}")
+            ]),
+        ]
+        for i in range(self.num_images):
+            messages.append(HumanMessagePromptTemplate.from_template(
+                [{"image_url": {"url": f"data:image/jpeg;base64,{{image_data{i+1}}}"}}]
+            ))
+
+        return messages
         
     def prepare_image_prompt_template(self):
             if self.num_images == 1:

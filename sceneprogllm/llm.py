@@ -64,9 +64,14 @@ class LLM:
         
         if self.image_input:
             self.image_helper = ImageHelper(self.system_desc, num_images, image_detail)
-            self.prompt_template = ChatPromptTemplate.from_messages(
-                messages = self.image_helper.prepare_image_prompt_template()
-            )
+            if self.use_local_image:
+                self.prompt_template = ChatPromptTemplate.from_messages(
+                    messages = self.image_helper.native_prepare_image_prompt_template()
+                )
+            else:
+                self.prompt_template = ChatPromptTemplate.from_messages(
+                    messages = self.image_helper.prepare_image_prompt_template()
+                )
         else:
             self.prompt_template = ChatPromptTemplate.from_messages([
                 ("system", self.system_desc),
