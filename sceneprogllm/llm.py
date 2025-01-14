@@ -41,7 +41,8 @@ class LLM:
         self.cache = CacheManager(self.name, no_cache)
         self.text2img = text2imgSD if image_generator == 'SD' else text2imgOpenAI
         self.llm_type = llm_type
-    
+
+        
         # Configure the response format
         if self.response_format == "json":
             self.response_format_config = {"type": "json_object"}
@@ -53,13 +54,15 @@ class LLM:
             self.model = ChatOpenAI(
                 model='gpt-4o' if not fast else "gpt-4o-mini",
                 api_key=os.getenv('OPENAI_API_KEY'),
+                response_format=self.response_format_config
             )
         elif self.llm_type == 'gemini':
             import google.generativeai as genai
             genai.configure(api_key=os.getenv('GOOGLE_API_KEY'))
             self.model = ChatGoogleGenerativeAI(
                 model = "gemini-exp-1206",
-                google_api_key=os.getenv('GOOGLE_API_KEY')
+                google_api_key=os.getenv('GOOGLE_API_KEY'),
+                response_format=self.response_format_config
             )
         else:
             raise ValueError("Invalid llm_type. Must be one of 'openai' or 'gemini'")
@@ -151,6 +154,12 @@ item1, item2, item3
                     For the query: {query}, the following response was generated: {response}. It didn't follow the expected format containing the keys: {self.json_keys}. Please ensure that the response follows the expected format and contains all the keys.
                     """
                     result = self.run(query, image_paths)
+        elif self.llm_type == "gemini" and self.response_format == "json" and self.json_keys:
+            filtered_result = {}
+            for key in self.json_keys:
+                if key in result:
+                    filtered_result[key] = result[key]
+            result = filtered_result
             
         self.cache.append(query, result)
         # Return the response
@@ -163,8 +172,3 @@ item1, item2, item3
     def _sanitize_output(self, text: str):
         _, after = text.split("```python")
         return after.split("```")[0]
-    
-        
-    
-    
-    
