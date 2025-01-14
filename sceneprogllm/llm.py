@@ -9,6 +9,7 @@ Key features
 '''
 import os
 from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
 from langchain_core.output_parsers import StrOutputParser, SimpleJsonOutputParser, CommaSeparatedListOutputParser, PydanticOutputParser
 from .cache_manager import CacheManager
@@ -26,7 +27,8 @@ class LLM:
                  json_keys=None,
                  debug_code=True,
                  no_cache=True,
-                 image_generator='SD'):
+                 image_generator='SD',
+                 llm_type='openai'):
         
         assert response_format in ['text', 'list', 'code', 'json', 'image', 'pydantic'], "Invalid response format, must be one of 'text', 'list', 'code', 'json', 'image', 'pydantic'"
         self.name=name
@@ -38,6 +40,7 @@ class LLM:
         self.debug_code = debug_code
         self.cache = CacheManager(self.name, no_cache)
         self.text2img = text2imgSD if image_generator == 'SD' else text2imgOpenAI
+        self.llm_type = llm_type
     
         # Configure the response format
         if self.response_format == "json":
@@ -46,11 +49,20 @@ class LLM:
             self.response_format_config = {"type": "text"}
 
         # Initialize the model with the given configuration
-        self.model = ChatOpenAI(
-            model='gpt-4o' if not fast else "gpt-4o-mini",
-            api_key=os.getenv('OPENAI_API_KEY'),
-            # model_kwargs={"response_format": self.response_format_config},
-        )
+        if self.llm_type == 'openai':
+            self.model = ChatOpenAI(
+                model='gpt-4o' if not fast else "gpt-4o-mini",
+                api_key=os.getenv('OPENAI_API_KEY'),
+            )
+        elif self.llm_type == 'gemini':
+            import google.generativeai as genai
+            genai.configure(api_key=os.getenv('GOOGLE_API_KEY'))
+            self.model = ChatGoogleGenerativeAI(
+                model = "gemini-exp-1206",
+                google_api_key=os.getenv('GOOGLE_API_KEY')
+            )
+        else:
+            raise ValueError("Invalid llm_type. Must be one of 'openai' or 'gemini'")
 
         # Initial system message and prompt template
         self.system_desc = system_desc or "You are a helpful assistant."
