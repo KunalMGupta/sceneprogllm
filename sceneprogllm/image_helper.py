@@ -1,3 +1,5 @@
+import base64
+
 from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
 from langchain_core.prompts.image import ImagePromptTemplate
 
@@ -160,6 +162,31 @@ class ImageHelper:
             return chain.invoke({'input':prompt, 'image_path1': image_paths[0], 'image_path2': image_paths[1], 'image_path3': image_paths[2], 'image_path4': image_paths[3], 'image_path5': image_paths[4], 'image_path6': image_paths[5], 'image_path7': image_paths[6], 'image_path8': image_paths[7], 'detail_parameter': self.image_detail})
         else:
             raise ValueError("Number of images should be between 1 and 8.")
+    
+    def native_invoke_image_prompt_template(self, chain, prompt, image_paths):
+        image_urls = []
+        to_invoke = {"input": prompt, "detail_parameter": self.image_detail}
+
+        for i in range(self.num_images):
+            with open(image_paths[i], "rb") as image_file:
+                image_data = base64.b64encode(image_file.read()).decode("utf-8")
+            to_invoke[f"image_data{i+1}"] = image_data
+        
+        return chain.invoke(to_invoke)    
+
+    def native_prepare_image_prompt_template(self):
+        messages = [
+            ChatPromptTemplate.from_messages([
+                ("system", self.system_desc),
+                ("human", "{input}")
+            ]),
+        ]
+        for i in range(self.num_images):
+            messages.append(HumanMessagePromptTemplate.from_template(
+                [{"image_url": {"url": f"data:image/jpeg;base64,{{image_data{i+1}}}"}}]
+            ))
+
+        return messages
         
     def prepare_image_prompt_template(self):
             if self.num_images == 1:
