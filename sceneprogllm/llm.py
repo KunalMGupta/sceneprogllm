@@ -12,9 +12,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
 from langchain_core.output_parsers import StrOutputParser, SimpleJsonOutputParser, CommaSeparatedListOutputParser, PydanticOutputParser
 from langchain_ollama import ChatOllama
-from langchain_core.globals import set_llm_cache
-from langchain_community.cache import GPTCache
-from .cache_manager import CacheManager, init_gptcache
+from .cache_manager import CacheManager
 from .image_helper import ImageHelper
 from .text2img import text2imgSD, text2imgOpenAI
 
@@ -27,12 +25,12 @@ class LLM:
                  num_images=0,
                  image_detail='auto',
                  json_keys=None,
-                 debug_code=True,
                  use_cache=True,
                  image_generator='SD',
                  use_ollama=False,
                  ollama_model_name='llama3.2-vision',
                  use_local_image=True):
+        
         assert response_format in ['text', 'list', 'code', 'json', 'image', 'pydantic'], "Invalid response format, must be one of 'text', 'list', 'code', 'json', 'image', 'pydantic'"
         self.name=name
         self.response_format = response_format
@@ -40,18 +38,18 @@ class LLM:
         self.image_input=True if num_images > 0 else False
         self.json_keys = json_keys
         self.num_images = num_images    
-        self.debug_code = debug_code
         self.use_ollama = use_ollama
 
-        if use_cache:
-            if use_ollama:
-                self.cache = CacheManager(self.name, no_cache=False)
-            else:
-                self.cache = GPTCache(init_gptcache)
-                set_llm_cache(self.cache)
-        else:
-            if use_ollama:
-                self.cache = CacheManager(self.name, no_cache=True)
+        self.cache = CacheManager(self.name, no_cache=False)
+        # if use_cache:
+        #     if use_ollama:
+        #         self.cache = CacheManager(self.name, no_cache=False)
+        #     else:
+        #         self.cache = GPTCache(init_gptcache)
+        #         set_llm_cache(self.cache)
+        # else:
+        #     if use_ollama:
+        #         self.cache = CacheManager(self.name, no_cache=True)
 
         self.use_cache = use_cache
         self.text2img = text2imgSD if image_generator == 'SD' else text2imgOpenAI
@@ -92,7 +90,7 @@ class LLM:
                 ("human", "{input}")
             ])
 
-    def run(self, query, image_paths=None, pydantic_object=None):
+    def __call__(self, query, image_paths=None, pydantic_object=None):
 
         if self.response_format == "pydantic":
             assert pydantic_object, "Pydantic object is required for response format 'pydantic'"
@@ -100,10 +98,13 @@ class LLM:
         if self.response_format == "image":
             return self.text2img(query)
         
-        if self.use_cache and self.use_ollama:
+        if self.use_cache and not self.image_input:
+        # if self.use_cache and self.use_ollama:
             result = self.cache.respond(query)
-            if result and not self.image_input:
+            if result:
                 return result
+            # if result and not self.image_input:
+            #     return result
             
         """Generates a response from the model based on the query and history."""
         # Append the user query to the history
@@ -168,9 +169,10 @@ item1, item2, item3
                     query = """ 
                     For the query: {query}, the following response was generated: {response}. It didn't follow the expected format containing the keys: {self.json_keys}. Please ensure that the response follows the expected format and contains all the keys.
                     """
-                    result = self.run(query, image_paths)
+                    result = self(query, image_paths)
         
-        if self.use_ollama:
+        # if self.use_ollama:
+        if self.use_cache and not self.image_input:
             self.cache.append(query, result)
         # Return the response
         return result
@@ -184,7 +186,8 @@ item1, item2, item3
         return after.split("```")[0]
     
     def clear_cache(self):
-        if self.use_cache and not self.use_ollama:
+        if self.use_cache:
+        # if self.use_cache and not self.use_ollama:
             self.cache.clear()
         else:
             print("Cache is not enabled for this LLM instance.")
