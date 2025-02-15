@@ -82,6 +82,12 @@ clear_llm_cache()
 
 ### **Using Ollama**
 
+For proper usage, export the respective variables
+```bash
+export OLLAMA_HOST= YOUT_OLLAMA_HOST_ADDRESS
+export OLLAMA_PORT= YOUT_OLLAMA_HOST_PORT_NUMBER
+```
+
 To use Ollama with the `LLM` class, you need to set the `use_ollama` parameter to `True` when initializing the `LLM` object. 
 
 Furthermore, you can specify the Ollama Model via `ollama_model_name`, the default is `"llama3.2-vision"`. See [Ollama model site](https://ollama.com/search) for the available options. Note that different model will support different modes (text, image, etc.).
