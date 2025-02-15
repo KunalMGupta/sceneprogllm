@@ -84,8 +84,8 @@ clear_llm_cache()
 
 For proper usage, export the respective variables
 ```bash
-export OLLAMA_HOST= YOUT_OLLAMA_HOST_ADDRESS
-export OLLAMA_PORT= YOUT_OLLAMA_HOST_PORT_NUMBER
+export OLLAMA_HOST= YOUR_OLLAMA_HOST_ADDRESS
+export OLLAMA_PORT= YOUR_OLLAMA_HOST_PORT_NUMBER
 ```
 
 To use Ollama with the `LLM` class, you need to set the `use_ollama` parameter to `True` when initializing the `LLM` object. 
