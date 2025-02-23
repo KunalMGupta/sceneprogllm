@@ -29,17 +29,21 @@ class LLM:
                  image_generator='SD',
                  use_ollama=False,
                  ollama_model_name='llama3.2-vision',
-                 use_local_image=True):
+                 use_local_image=True,
+                 ):
         
-        assert response_format in ['text', 'list', 'code', 'json', 'image', 'pydantic'], "Invalid response format, must be one of 'text', 'list', 'code', 'json', 'image', 'pydantic'"
+        assert response_format in ['text', 'list', 'code', 'json', 'image', 'pydantic','3d'], "Invalid response format, must be one of 'text', 'list', 'code', 'json', 'image', 'pydantic'"
         self.name=name
         self.response_format = response_format
+
+        if self.response_format == "3d":
+            return
+
         self.image_detail=image_detail
         self.image_input=True if num_images > 0 else False
         self.json_keys = json_keys
         self.num_images = num_images    
         self.use_ollama = use_ollama
-
         self.cache = CacheManager(self.name, no_cache=False)
         # if use_cache:
         #     if use_ollama:
@@ -92,6 +96,10 @@ class LLM:
 
     def __call__(self, query, image_paths=None, pydantic_object=None):
 
+        if self.response_format == "3d":
+            from .textto3d import text_to_3d
+            return text_to_3d(query)
+        
         if self.response_format == "pydantic":
             assert pydantic_object, "Pydantic object is required for response format 'pydantic'"
             
