@@ -21,44 +21,29 @@ class LLM:
                  name, 
                  system_desc=None, 
                  response_format="text", 
-                 fast=False, 
-                 num_images=0,
                  image_detail='auto',
                  json_keys=None,
                  use_cache=True,
-                 image_generator='SD',
-                 use_ollama=False,
-                 ollama_model_name='llama3.2-vision',
-                 use_local_image=True,
+                 model_name='gpt-4o',
                  ):
         
         assert response_format in ['text', 'list', 'code', 'json', 'image', 'pydantic','3d'], "Invalid response format, must be one of 'text', 'list', 'code', 'json', 'image', 'pydantic'"
-        self.name=name
+        self.name = name
         self.response_format = response_format
 
         if self.response_format == "3d":
             return
 
-        self.image_detail=image_detail
-        self.image_input=True if num_images > 0 else False
+        self.image_detail = image_detail
+        self.image_input = True if image_detail else False
         self.json_keys = json_keys
-        self.num_images = num_images    
-        self.use_ollama = use_ollama
-        self.cache = CacheManager(self.name, no_cache=False)
-        # if use_cache:
-        #     if use_ollama:
-        #         self.cache = CacheManager(self.name, no_cache=False)
-        #     else:
-        #         self.cache = GPTCache(init_gptcache)
-        #         set_llm_cache(self.cache)
-        # else:
-        #     if use_ollama:
-        #         self.cache = CacheManager(self.name, no_cache=True)
-
         self.use_cache = use_cache
-        self.text2img = text2imgSD if image_generator == 'SD' else text2imgOpenAI
-        self.use_local_image = use_local_image
-    
+        self.model_name = model_name
+        self.system_desc = system_desc or "You are a helpful assistant."
+        
+        self.cache = CacheManager(self.name, no_cache=not use_cache)
+        self.text2img = text2imgSD if model_name == 'SD' else text2imgOpenAI
+
         # Configure the response format
         if self.response_format == "json":
             self.response_format_config = {"type": "json_object"}
@@ -66,33 +51,20 @@ class LLM:
             self.response_format_config = {"type": "text"}
 
         # Initialize the model with the given configuration
-        if self.use_ollama:
-            self.model = ChatOllama(model=ollama_model_name, temperature=1)
-        else:
+        if 'gpt' in model_name:
             self.model = ChatOpenAI(
-                model='gpt-4o' if not fast else "gpt-4o-mini",
+                model=model_name,
                 api_key=os.getenv('OPENAI_API_KEY'),
-                # model_kwargs={"response_format": self.response_format_config},
             )
-
-        # Initial system message and prompt template
-        self.system_desc = system_desc or "You are a helpful assistant."
-        
-        if self.image_input:
-            self.image_helper = ImageHelper(self.system_desc, num_images, image_detail)
-            if self.use_local_image:
-                self.prompt_template = ChatPromptTemplate.from_messages(
-                    messages = self.image_helper.native_prepare_image_prompt_template()
-                )
-            else:
-                self.prompt_template = ChatPromptTemplate.from_messages(
-                    messages = self.image_helper.prepare_image_prompt_template()
-                )
         else:
-            self.prompt_template = ChatPromptTemplate.from_messages([
-                ("system", self.system_desc),
-                ("human", "{input}")
-            ])
+            self.model = ChatOllama(model=model_name, temperature=0.8)
+            
+        # Initial system message and prompt template
+        self.image_helper = ImageHelper(self.system_desc, image_detail)
+        self.prompt_template = ChatPromptTemplate.from_messages([
+            ("system", self.system_desc),
+            ("human", "{input}")
+        ])
 
     def __call__(self, query, image_paths=None, pydantic_object=None):
 
@@ -107,22 +79,16 @@ class LLM:
             return self.text2img(query)
         
         if self.use_cache and not self.image_input:
-        # if self.use_cache and self.use_ollama:
             result = self.cache.respond(query)
             if result:
                 return result
-            # if result and not self.image_input:
-            #     return result
             
         """Generates a response from the model based on the query and history."""
-        # Append the user query to the history
         self.history = [{"role": "system", "content": self.system_desc}]
         self.history.append({"role": "human", "content": query})
         
-        # Prepare the full prompt with chat history
         full_prompt = self._get_prompt_with_history()
         
-        # Define the chain based on the response format
         if self.response_format == "json":
             chain = self.prompt_template | self.model | SimpleJsonOutputParser()
         elif self.response_format == "list":
@@ -130,10 +96,10 @@ class LLM:
         elif self.response_format == "pydantic":
             parser = PydanticOutputParser(pydantic_object=pydantic_object)
             self.prompt_template = PromptTemplate(
-                                                template="Answer the user query.\n{format_instructions}\n{input}\n",
-                                                input_variables=["input"],
-                                                partial_variables={"format_instructions": parser.get_format_instructions()},
-                                            )
+                template="Answer the user query.\n{format_instructions}\n{input}\n",
+                input_variables=["input"],
+                partial_variables={"format_instructions": parser.get_format_instructions()},
+            )
             chain = self.prompt_template | self.model | parser
         else:
             chain = self.prompt_template | self.model | StrOutputParser()
@@ -156,22 +122,21 @@ class LLM:
             full_prompt += """Return a comma separated list of items, e.g.:
 item1, item2, item3
 """
-        # Invoke the model and get the response
+        
         if self.image_input:
-            if self.use_local_image:
-                result = self.image_helper.native_invoke_image_prompt_template(chain, full_prompt, image_paths)
-            else:
-                assert len(image_paths) == self.num_images, f"Number of images should be {self.num_images}."
-                image_paths = self.image_helper.upload_images_to_s3(image_paths)
-                result = self.image_helper.invoke_image_prompt_template(chain, full_prompt, image_paths)
+            self.prompt_template = ChatPromptTemplate.from_messages(
+                messages = self.image_helper.prepare_image_prompt_template(image_paths)
+            )
+            chain = self.prompt_template | self.model | StrOutputParser()
+            result = self.image_helper.invoke_image_prompt_template(chain, full_prompt, image_paths)
         else:
+            
             result = chain.invoke({"input": full_prompt})
         
         if self.response_format == "code":
             result = self._sanitize_output(result)
 
         if self.response_format == "json" and self.json_keys:
-            # Check if all the keys are present in the response
             for key in self.json_keys:
                 if key not in result:
                     query = """ 
@@ -179,10 +144,9 @@ item1, item2, item3
                     """
                     result = self(query, image_paths)
         
-        # if self.use_ollama:
         if self.use_cache and not self.image_input:
             self.cache.append(query, result)
-        # Return the response
+        
         return result
     
     def _get_prompt_with_history(self):
@@ -195,7 +159,6 @@ item1, item2, item3
     
     def clear_cache(self):
         if self.use_cache:
-        # if self.use_cache and not self.use_ollama:
             self.cache.clear()
         else:
             print("Cache is not enabled for this LLM instance.")
