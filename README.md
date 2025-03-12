@@ -24,10 +24,6 @@ pip install sceneprogllm
 For proper usage, export the respective variables
 ```bash
 export OPENAI_API_KEY= YOUR_OPENAI_API_KEY
-export AWS_ACCESS_KEY= YOUR_AWS_ACCESS_KEY
-export AWS_SECRET_KEY= YOUR_AWS_SECRET_KEY
-export AWS_REGION = AWS_REGION
-export AWS_S3_BUCKET= AWS_S3_BUCKET
 ```
 
 ## **Getting Started**
@@ -40,7 +36,7 @@ from sceneprogllm import LLM
 1. **Generating Text Responses**
 ```python
 llm = LLM(name="text_bot", response_format="text")
-response = llm.run("What is the capital of France?")
+response = llm("What is the capital of France?")
 print(response)
 ```
 2. **Generating JSON Responses**
@@ -51,14 +47,14 @@ llm = LLM(
     json_keys=["capital", "currency"]
 )
 query = "What is capital and currency of India?"
-response = llm.run(query)
+response = llm(query)
 print(response)
 ```
 3. **Generating Python Code**
 ```python
 llm = LLM(name="code_bot", response_format="code")
 query = "Write a Python function to calculate factorial of a number."
-response = llm.run(query)
+response = llm(query)
 print(response)
 ```
 4. **Generating images from text**
@@ -69,9 +65,9 @@ response.save("futuristic_city.jpg")
 ```
 5. **Query using Images**
 ```python
-llm = LLM(name="image_bot", response_format="text", num_images=1, image_generator="SD")
+llm = LLM(name="image_bot", response_format="text")
 image_paths = ["path/to/input_image.jpg"]
-response = llm.run("What is the color of the object in the image?", image_paths=image_paths)
+response = llm("What is the color of the object in the image?", image_paths=image_paths)
 ```
 6. **Clear LLM cache**
 ```python
@@ -82,9 +78,10 @@ clear_llm_cache()
 
 ### **Using Ollama**
 
-To use Ollama with the `LLM` class, you need to set the `use_ollama` parameter to `True` when initializing the `LLM` object. 
+To use Ollama with the `LLM` class, make sure Ollama is installed. Then, when initializing the `LLM` object, specify the Ollama Model via `model_name`. For example, `"llama3.2-vision"`. 
 
-Furthermore, you can specify the Ollama Model via `ollama_model_name`, the default is `"llama3.2-vision"`. See [Ollama model site](https://ollama.com/search) for the available options. Note that different model will support different modes (text, image, etc.).
+See [Ollama model site](https://ollama.com/search) for the available options. Note that different model will support different modes (text, image, etc.).
+
 
 Here is an example:
 
@@ -92,5 +89,15 @@ Here is an example:
 from sceneprogllm import LLM
 
 # Example for generating text responses using Ollama
-llm = LLM(name="text_bot", response_format="text", use_ollama=True)
+llm = LLM(name="text_bot", response_format="text", model_name="llama-vision:3.2")
+```
+
+## Contributing
+
+Run the following to install dependencies:
+
+```bash
+git clone https://github.com/KunalMGupta/sceneprogllm.git
+cd sceneprogllm
+conda env create -f environment.yml
 ```
