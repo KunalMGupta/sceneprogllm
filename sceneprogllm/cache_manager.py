@@ -78,6 +78,7 @@ class CacheManager:
         if row:
             return self._deserialize_response(row[0])
         similar_match = self._find_similar(query)
+        print(f"Similar match: {similar_match}")
         if similar_match:
             self.cursor.execute("SELECT response FROM cache WHERE query = ?", (similar_match,))
             row = self.cursor.fetchone()

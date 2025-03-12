@@ -19,9 +19,8 @@ def convert_to_base64(image_path):
     return img_str, format.lower()
 
 class ImageHelper:
-    def __init__(self, system_desc, image_detail='low'):
+    def __init__(self, system_desc):
         self.system_desc = system_desc
-        self.image_detail = image_detail
 
     def prepare_image_prompt_template(self, image_paths):
         messages = [
@@ -38,7 +37,7 @@ class ImageHelper:
 
         return messages
     def invoke_image_prompt_template(self, chain, prompt, image_paths):
-        to_invoke = {"input": prompt, "detail_parameter": self.image_detail}
+        to_invoke = {"input": prompt}
 
         for i in range(len(image_paths)):
             img_str, _ = convert_to_base64(image_paths[i])

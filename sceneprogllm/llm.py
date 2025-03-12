@@ -19,14 +19,13 @@ from .image_helper import ImageHelper
 from .text2img import text2imgSD, text2imgOpenAI
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(filename='sceneprogllm.log', encoding='utf-8', level=logging.DEBUG)
+logging.basicConfig(filename='sceneprogllm.log', encoding='utf-8', level=logging.INFO)
 
 class LLM:
     def __init__(self,
                  name, 
                  system_desc=None, 
                  response_format="text", 
-                 image_detail='auto',
                  json_keys=None,
                  use_cache=True,
                  model_name='gpt-4o',
@@ -43,8 +42,6 @@ class LLM:
             logger.warning("3D response is not supported.")
             return
 
-        self.image_detail = image_detail
-        self.image_input = True if image_detail else False
         self.json_keys = json_keys
         self.use_cache = use_cache
         self.model_name = model_name
@@ -71,7 +68,7 @@ class LLM:
             logger.info(f"Using Ollama model: {model_name}")
             
         # Initial system message and prompt template
-        self.image_helper = ImageHelper(self.system_desc, image_detail)
+        self.image_helper = ImageHelper(self.system_desc)
         self.prompt_template = ChatPromptTemplate.from_messages([
             ("system", self.system_desc),
             ("human", "{input}")
@@ -89,12 +86,12 @@ class LLM:
         if self.response_format == "image":
             return self.text2img(query)
         
-        if self.use_cache and not self.image_input:
+        if self.use_cache and not image_paths:
             result = self.cache.respond(query)
             if result:
                 return result
             
-        """Generates a response from the model based on the query and history."""
+        # Generates a response from the model based on the query and history.
         self.history = [{"role": "system", "content": self.system_desc}]
         self.history.append({"role": "human", "content": query})
         
@@ -139,7 +136,7 @@ class LLM:
 item1, item2, item3
 """
         
-        if self.image_input:
+        if image_paths is not None:
             self.prompt_template = ChatPromptTemplate.from_messages(
                 messages = self.image_helper.prepare_image_prompt_template(image_paths)
             )
@@ -162,9 +159,9 @@ item1, item2, item3
                     return None
         
         if self.response_format == "json":
-            result = self._adjust_json_types(result)
+            result = self._adjust_json_types(str(result))
 
-        if self.use_cache and not self.image_input:
+        if self.use_cache and not image_paths:
             self.cache.append(query, result)
         
         return result
@@ -204,4 +201,4 @@ item1, item2, item3
         if self.use_cache:
             self.cache.clear()
         else:
-            print("Cache is not enabled for this LLM instance.")
+            logger.error("Cache is not enabled for this LLM instance.")
