@@ -8,6 +8,8 @@ Key features
 5. Ensure JSON is generated correctly
 '''
 import os
+import logging
+import json
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
 from langchain_core.output_parsers import StrOutputParser, SimpleJsonOutputParser, CommaSeparatedListOutputParser, PydanticOutputParser
@@ -15,6 +17,9 @@ from langchain_ollama import ChatOllama
 from .cache_manager import CacheManager
 from .image_helper import ImageHelper
 from .text2img import text2imgSD, text2imgOpenAI
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(filename='sceneprogllm.log', encoding='utf-8', level=logging.DEBUG)
 
 class LLM:
     def __init__(self,
@@ -31,7 +36,11 @@ class LLM:
         self.name = name
         self.response_format = response_format
 
+        if self.response_format == "json" and not json_keys:
+            logger.warning("json_keys must be provided when response_format is 'json'")
+
         if self.response_format == "3d":
+            logger.warning("3D response is not supported.")
             return
 
         self.image_detail = image_detail
@@ -56,8 +65,10 @@ class LLM:
                 model=model_name,
                 api_key=os.getenv('OPENAI_API_KEY'),
             )
+            logger.info(f"Using OpenAI model: {model_name}")
         else:
             self.model = ChatOllama(model=model_name, temperature=0.8)
+            logger.info(f"Using Ollama model: {model_name}")
             
         # Initial system message and prompt template
         self.image_helper = ImageHelper(self.system_desc, image_detail)
@@ -105,12 +116,17 @@ class LLM:
             chain = self.prompt_template | self.model | StrOutputParser()
         
         if self.response_format == "json":
-            full_prompt += """Return only JSON object, e.g.:
+            if not self.json_keys:
+                json_example = {"key": "value"}
+            else:
+                json_example = {key: "value" for key in self.json_keys}
+            full_prompt += f"""Return a JSON object STRICTLY with the following keys: {self.json_keys}.
+            All keys must be present in the response.
+            e.g.:
 ```json
-{
-    "key": "value"
-}
+{json.dumps(json_example, indent=4)}
 ```"""
+        
 
         if self.response_format == "code":
             full_prompt += """Return only python code in Markdown format, e.g.:
@@ -139,15 +155,42 @@ item1, item2, item3
         if self.response_format == "json" and self.json_keys:
             for key in self.json_keys:
                 if key not in result:
-                    query = """ 
-                    For the query: {query}, the following response was generated: {response}. It didn't follow the expected format containing the keys: {self.json_keys}. Please ensure that the response follows the expected format and contains all the keys.
+                    query = f""" 
+                    For the query: {query}, the following response was generated: {result}. It didn't follow the expected format containing the keys: {self.json_keys}. Please ensure that the response follows the expected format and contains all the keys.
                     """
-                    result = self(query, image_paths)
+                    logging.error(query)
+                    return None
         
+        if self.response_format == "json":
+            result = self._adjust_json_types(result)
+
         if self.use_cache and not self.image_input:
             self.cache.append(query, result)
         
         return result
+    
+    def _adjust_json_types(self, json_str):
+        """Adjust JSON types for None and boolean values."""
+        try:
+            json_obj = json.loads(json_str)
+            adjusted_json_str = json.dumps(json_obj, default=self._json_type_converter)
+            return adjusted_json_str
+        except json.JSONDecodeError:
+            logger.error("Failed to decode JSON response.")
+            return json_str
+
+    def _json_type_converter(self, obj):
+        """Convert JSON types to appropriate Python types."""
+        if obj is None:
+            return None
+        if obj == "True":
+            return True
+        elif obj == "False":
+            return False
+        elif obj == "None":
+            return None
+
+        return str(obj)
     
     def _get_prompt_with_history(self):
         """Constructs the full prompt including chat history."""
