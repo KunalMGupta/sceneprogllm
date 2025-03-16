@@ -47,7 +47,8 @@ class LLM:
         self.model_name = model_name
         self.system_desc = system_desc or "You are a helpful assistant."
         
-        self.cache = CacheManager(self.name, no_cache=not use_cache)
+        if use_cache:
+            self.cache = CacheManager(self.name, no_cache=not use_cache)
         self.text2img = text2imgSD if model_name == 'SD' else text2imgOpenAI
 
         # Configure the response format
@@ -57,6 +58,7 @@ class LLM:
             self.response_format_config = {"type": "text"}
 
         # Initialize the model with the given configuration
+        print(model_name)
         if 'gpt' in model_name:
             self.model = ChatOpenAI(
                 model=model_name,
