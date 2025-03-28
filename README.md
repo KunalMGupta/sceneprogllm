@@ -96,8 +96,18 @@ llm = LLM(name="text_bot", response_format="text", model_name="llama-vision:3.2"
 
 Run the following to install dependencies:
 
+Clone the repository:
 ```bash
 git clone https://github.com/KunalMGupta/sceneprogllm.git
 cd sceneprogllm
+```
+
+For Linux users, create the environment with:
+```bash
 conda env create -f environment.yml
+```
+
+For macOS (Apple Silicon) users, create the environment with:
+```bash
+conda env create -f environment.macos.yml
 ```
