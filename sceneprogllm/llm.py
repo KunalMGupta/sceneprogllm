@@ -77,7 +77,13 @@ class LLM:
         ])
 
     def __call__(self, query, image_paths=None, pydantic_object=None):
-
+        # sanitize query
+        if '{' in query:
+            query = query.replace('{', '{{').replace('}', '}}')
+        ## sanitize system description
+        if '{' in system_desc:
+            system_desc = system_desc.replace('{', '{{').replace('}', '}}')
+        
         if self.response_format == "3d":
             from .textto3d import text_to_3d
             return text_to_3d(query)
