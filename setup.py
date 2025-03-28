@@ -15,4 +15,11 @@ setup(
         'Operating System :: OS Independent',
     ],
     python_requires='>=3.9',  # Replace with the minimum Python version your package supports
+    install_requires=[
+        'langchain',
+        'langchain-openai',
+        'langchain-community',
+        'bentoml',
+        'Image'
+    ]
 )
