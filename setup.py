@@ -19,6 +19,7 @@ setup(
         'langchain',
         'langchain-openai',
         'langchain-community',
+        'langchain-ollama',
         'bentoml',
         'Image'
     ]
