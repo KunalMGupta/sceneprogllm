@@ -87,7 +87,7 @@ class LLM:
     def __call__(self, query, image_paths=None, pydantic_object=None):
         # sanitize query and system description
         query = query.replace('{', '{{').replace('}', '}}')
-        system_desc = system_desc.replace('{', '{{').replace('}', '}}')
+        self.system_desc = self.system_desc.replace('{', '{{').replace('}', '}}')
         
         # Early return for 3D response format
         if self.response_format == "3d":
@@ -113,7 +113,7 @@ class LLM:
                 pydantic_object = DefaultJsonResponse
         
         if self.use_cache and not image_paths:
-            cached_result = self.cache.respond(query)
+            cached_result = self.cache.respond(query, self.system_desc)
             if cached_result:
                 return cached_result
             
@@ -154,7 +154,7 @@ class LLM:
             result = self._sanitize_output(result)
 
         if self.use_cache and not image_paths:
-            self.cache.append(query, result)
+            self.cache.append(query, result, self.system_desc)
         
         if self.response_format == "json":
             result = result.model_dump_json()

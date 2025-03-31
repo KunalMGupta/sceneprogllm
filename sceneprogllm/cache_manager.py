@@ -27,7 +27,8 @@ class CacheManager:
             CREATE TABLE IF NOT EXISTS cache (
                 query TEXT PRIMARY KEY,
                 response TEXT,
-                embedding BLOB
+                embedding BLOB,
+                system_description TEXT
             )
         """)
         self.conn.commit()
@@ -69,28 +70,35 @@ class CacheManager:
             return stored_queries[best_idx]
         return None
 
-    def respond(self, query: str) -> Optional[Union[str, dict, BaseModel]]:
+    def respond(self, query: str, system_description: str) -> Optional[Union[str, dict, BaseModel]]:
         """Returns a cached response if available."""
         if self.no_cache:
             return None
-        self.cursor.execute("SELECT response FROM cache WHERE query = ?", (query,))
+        
+        # First try
+        # Exact match for both query and system description
+        self.cursor.execute("SELECT response FROM cache WHERE query = ? AND system_description = ?", (query, system_description))
         row = self.cursor.fetchone()
         if row:
             return self._deserialize_response(row[0])
+        
+        # Second Try: Match semantically similar query. 
+        # System Description must still match.
         similar_match = self._find_similar(query)
         if similar_match:
-            self.cursor.execute("SELECT response FROM cache WHERE query = ?", (similar_match,))
+            self.cursor.execute("SELECT response FROM cache WHERE query = ? AND system_description = ?", (similar_match, system_description))
             row = self.cursor.fetchone()
-            return self._deserialize_response(row[0]) if row else None
+            if row:
+                return self._deserialize_response(row[0])
         return None
 
-    def append(self, query: str, response: Union[str, dict, BaseModel]):
+    def append(self, query: str, response: Union[str, dict, BaseModel], system_description: str):
         """Stores a new response in the cache."""
         if self.no_cache:
             return
         response_str = self._serialize_response(response)
         embedding = self._get_embedding(query)
-        self.cursor.execute("INSERT OR REPLACE INTO cache (query, response, embedding) VALUES (?, ?, ?)", (query, response_str, embedding))
+        self.cursor.execute("INSERT OR REPLACE INTO cache (query, response, embedding, system_description) VALUES (?, ?, ?, ?)", (query, response_str, embedding, system_description))
         self.conn.commit()
 
     def _serialize_response(self, response: Union[str, dict, BaseModel]) -> str:
