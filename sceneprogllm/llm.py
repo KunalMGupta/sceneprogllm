@@ -85,20 +85,21 @@ class LLM:
         ])
 
     def __call__(self, query, image_paths=None, pydantic_object=None):
-        # sanitize query
-        if '{' in query:
-            query = query.replace('{', '{{').replace('}', '}}')
-        ## sanitize system description
-        if '{' in self.system_desc:
-            system_desc = system_desc.replace('{', '{{').replace('}', '}}')
+        # sanitize query and system description
+        query = query.replace('{', '{{').replace('}', '}}')
+        system_desc = system_desc.replace('{', '{{').replace('}', '}}')
         
+        # Early return for 3D response format
         if self.response_format == "3d":
             from .textto3d import text_to_3d
             return text_to_3d(query)
-        elif self.response_format == "pydantic":
-            assert pydantic_object, "Pydantic object is required for response format 'pydantic'"
-        elif self.response_format == "image":
+        
+        # Early return for image response format
+        if self.response_format == "image":
             return self.text2img(query)
+        
+        if self.response_format == "pydantic":
+            assert pydantic_object, "Pydantic object is required for response format 'pydantic'"
         elif self.response_format == "list":
             pydantic_object = ListResponse
         elif self.response_format == "json":
@@ -112,9 +113,9 @@ class LLM:
                 pydantic_object = DefaultJsonResponse
         
         if self.use_cache and not image_paths:
-            result = self.cache.respond(query)
-            if result:
-                return result
+            cached_result = self.cache.respond(query)
+            if cached_result:
+                return cached_result
             
         # Generates a response from the model based on the query and history.
         self.history = [{"role": "system", "content": self.system_desc}]
