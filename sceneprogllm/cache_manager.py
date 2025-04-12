@@ -30,13 +30,18 @@ class CacheManager:
         if not self.no_cache:
             np.savez(self.db_path, **self.db)
 
-    def respond(self, query: str) -> Optional[Union[str, dict, BaseModel]]:
+    def respond(self, query: str, pydantic_object) -> Optional[Union[str, dict, BaseModel]]:
         if self.no_cache:
             return None
         
         if query in self.db:
             response_str = self.db[query].item()
-            return self._deserialize_response(response_str)
+            response = self._deserialize_response(response_str)
+            if pydantic_object:
+                try:
+                    return pydantic_object(**response)
+                except :
+                    return response
         else:
             return None
 

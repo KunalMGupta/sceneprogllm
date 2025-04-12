@@ -93,7 +93,7 @@ class LLM:
         if self.use_cache and not image_paths:
 
             commit = self.compute_commit(query, pydantic_object)
-            cached_result = self.cache.respond(commit)
+            cached_result = self.cache.respond(commit, pydantic_object)
             if cached_result:
                 return cached_result
 
