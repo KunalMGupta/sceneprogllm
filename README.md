@@ -11,6 +11,8 @@
    - Accepts image inputs and enables image generation through Stable Diffusion (SD) or OpenAI's image generation API.
 3. **Caching**: 
    - Integrated caching system to store and retrieve previous query responses for faster execution.
+4. **System Template**:
+    - Allows users to set a system description template containing placeholders which can be later filled with values. 
 ---
 
 ## **Installation**
@@ -154,6 +156,19 @@ print(response)
 
 Ah, the capital of France! That's Paris, the city of romance, lights, and baguettes longer than your arm! Just imagine the Eiffel Tower wearing a beret and saying, "Bonjour!"
 ```
+
+11. **Using Template**
+```python
+from sceneprogllm import LLM
+llm = LLM(
+    name="template_bot",
+    system_desc="You are a helpful assistant. {description}",
+)
+
+response = llm("What is the capital of France?", system_desc_keys={"description": "You are a funny AI assistant"})
+print(response)
+```
+
 ### **Using Ollama**
 
 Additional models like Deekseek-R1 and Llama3.2-vision are available via Ollama with the `LLM` class, make sure Ollama is installed. Then, when initializing the `LLM` object, specify the Ollama Model via `model_name`. For example, `"llama3.2-vision"`. 
