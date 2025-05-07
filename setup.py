@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 setup(
     name='sceneprogllm',  # Replace with your package's name
-    version='0.1.4',    # Replace with your package's version
+    version='0.1.6',    # Replace with your package's version
     description='An LLM wrapper built for scene prog projects',
     long_description=open('README.md').read(),  # Optional: Use your README for a detailed description
     long_description_content_type='text/markdown',

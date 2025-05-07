@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 from .image_helper import ImageHelper
 from .text2img import text2imgSD, text2imgOpenAI
-
+from .template import SceneProgTemplate
 from .cache_manager import CacheManager
 
 class ListResponse(BaseModel):
@@ -57,20 +57,36 @@ class LLM:
         else:
             raise ValueError("Unsupported model name. Please use 'gpt' or 'ollama'.")
         
-        self.image_helper = ImageHelper(self.system_desc)
+    def set_system_desc(self, system_desc_keys=None):
+        if '$' in self.system_desc and system_desc_keys is None:
+            raise ValueError("system_desc_keys must be provided when system_desc contains placeholders. Detected $ in system_desc. Is that a mistake?")
+        
+        if system_desc_keys is not None:
+            system_desc = SceneProgTemplate().format(self.system_desc, **system_desc_keys)
+            assert '$' not in system_desc, "Incomplete set of system_desc_keys. Please provide all keys to fill the placeholders."
+
+        else:
+            system_desc = self.system_desc
+
+        ## sanitize the system description
+        system_desc = system_desc.replace('{', '{{').replace('}', '}}')
+
+        self.image_helper = ImageHelper(system_desc)
         self.prompt_template = ChatPromptTemplate.from_messages([
-            ("system", self.system_desc),
+            ("system", system_desc),
             ("human", "{input}")
         ])
-
         self.msg_header = f"""
-"system": "{self.system_desc}",
+"system": "{system_desc}",
 """
-    def __call__(self, query, image_paths=None, pydantic_object=None):
+        return system_desc
+    
+    def __call__(self, query, image_paths=None, pydantic_object=None, system_desc_keys=None):
+
+        system_desc = self.set_system_desc(system_desc_keys)
 
         # sanitize the query and system description
         query = query.replace('{', '{{').replace('}', '}}')
-        self.system_desc = self.system_desc.replace('{', '{{').replace('}', '}}')
 
         # Early return for image response format
         if self.response_format == "image":
@@ -92,7 +108,7 @@ class LLM:
         
         if self.use_cache and not image_paths:
 
-            commit = self.compute_commit(query, pydantic_object)
+            commit = self.compute_commit(system_desc, query, pydantic_object)
             cached_result = self.cache.respond(commit, pydantic_object)
             if cached_result:
                 return cached_result
@@ -145,7 +161,7 @@ class LLM:
             result = self._sanitize_output(result)
 
         if self.use_cache and not image_paths:
-            commit = self.compute_commit(query, pydantic_object)
+            commit = self.compute_commit(system_desc, query, pydantic_object)
             self.cache.append(commit, result)
         
         if self.response_format == "json":
@@ -175,8 +191,8 @@ class LLM:
         if self.use_cache:
             self.cache.clear()
         
-    def compute_commit(self, query, pydantic_object):
-        commit = query + "\n"+ self.system_desc + f"\nresponse_format={self.response_format}\nmodel_name={self.model_name}\nseed={self.seed}\ntemperature={self.temperature}"
+    def compute_commit(self, system_desc, query, pydantic_object):
+        commit = query + "\n"+ system_desc + f"\nresponse_format={self.response_format}\nmodel_name={self.model_name}\nseed={self.seed}\ntemperature={self.temperature}"
         if pydantic_object is not None:
             commit += f"\npydantic_object={pydantic_object.__name__}"
         return commit
