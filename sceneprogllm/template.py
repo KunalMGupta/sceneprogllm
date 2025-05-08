@@ -29,7 +29,7 @@ class SceneProgTemplate:
         return self.template_str[start:end].strip()
 
     @staticmethod
-    def format(template_str, **kwargs):
+    def format(template_str, placeholders):
         """Static method to safely substitute values into a string template."""
         assert isinstance(template_str, str), "template_str must be a string"
-        return Template(template_str).safe_substitute(**kwargs)
+        return Template(template_str).safe_substitute(placeholders)
