@@ -62,7 +62,7 @@ class LLM:
             raise ValueError("system_desc_keys must be provided when system_desc contains placeholders. Detected $ in system_desc. Is that a mistake?")
         
         if system_desc_keys is not None:
-            system_desc = SceneProgTemplate().format(self.system_desc, **system_desc_keys)
+            system_desc = SceneProgTemplate.format(self.system_desc, system_desc_keys)
             assert '$' not in system_desc, "Incomplete set of system_desc_keys. Please provide all keys to fill the placeholders."
 
         else:
