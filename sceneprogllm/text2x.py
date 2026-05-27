@@ -3,7 +3,7 @@ import base64
 import numpy as np
 from PIL import Image
 from io import BytesIO
-from openai import OpenAI
+from openai import OpenAI, api_key
 from dotenv import load_dotenv
 load_dotenv()
 from pathlib import Path
@@ -16,6 +16,7 @@ def text2img(
     size="auto",
     quality="auto",
     background="transparent",
+    api_key=None,
 ):
     assert size in ["1024x1024", "1536x1024", "1024x1536", "auto"], \
         "Invalid size. Must be one of '1024x1024', '1536x1024', '1024x1536', 'auto'"
@@ -27,7 +28,7 @@ def text2img(
     if mask_path and not image_paths:
         raise ValueError("mask_path requires at least one base image in image_paths (the mask applies to the first image).")
 
-    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    client = OpenAI(api_key=api_key if api_key is not None else os.getenv("OPENAI_API_KEY"))
 
     # ---- Build input (text + optional reference images) ----
     if image_paths:
@@ -99,6 +100,7 @@ def text2speech(
     response_format: str = "mp3",
     speed: float = 1.0,
     stream_format: str = "audio",
+    api_key=None,
 ):
     """
     Convert text to speech and stream audio to a file.
@@ -118,7 +120,7 @@ def text2speech(
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    client = OpenAI()
+    client = OpenAI(api_key=api_key if api_key is not None else os.getenv("OPENAI_API_KEY"))
 
     request = {
         "model": model,
@@ -142,6 +144,7 @@ def text2embeddings(
     texts: list[str],
     *,
     model: str = "text-embedding-3-large",
+    api_key=None,
 ) -> list[list[float]]:
     """
     Create embeddings for a list of texts in a single request.
@@ -153,7 +156,7 @@ def text2embeddings(
     if type(texts) is str:
         texts = [texts]
     cleaned = [t.replace("\n", " ") for t in texts]
-    client = OpenAI()
+    client = OpenAI(api_key=api_key if api_key is not None else os.getenv("OPENAI_API_KEY"))
     response = client.embeddings.create(
         model=model,
         input=cleaned,

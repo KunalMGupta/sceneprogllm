@@ -24,6 +24,7 @@ class LLM:
                  response_params=None,
                  model_name='gpt-5-nano',
                  reasoning_effort="medium",
+                 api_key=None,
                  seed=124,
                  temperature=0.8,
                  ):
@@ -41,7 +42,8 @@ class LLM:
         self.system_desc = system_desc
         self.temperature = temperature
         self.seed = seed
-        self.model = ChatOpenAI(model_name=model_name, reasoning_effort=reasoning_effort, api_key=os.getenv("OPENAI_API_KEY"),seed=self.seed, temperature=self.temperature)
+        self.api_key = api_key if api_key is not None else os.getenv("OPENAI_API_KEY")
+        self.model = ChatOpenAI(model_name=model_name, reasoning_effort=reasoning_effort, api_key=self.api_key, seed=self.seed, temperature=self.temperature)
 
     def set_system_desc(self, system_desc_keys=None):
         if '$' in self.system_desc and system_desc_keys is None:
