@@ -46,12 +46,20 @@ def text2img(
         input_payload = text  # text-only
 
     # ---- Build tool options (add mask if provided) ----
+    # Transparent backgrounds are only supported by gpt-image-1; the Responses
+    # API's newer default image model rejects them. Use the default (newer) model
+    # in general, and only pin gpt-image-1 when transparency is actually needed.
     tool = {
         "type": "image_generation",
-        "background": background,
         "quality": quality,
         "size": size,
     }
+
+    if background == "transparent":
+        tool["model"] = "gpt-image-1"
+        tool["background"] = background
+    elif background != "auto":
+        tool["background"] = background
 
     if mask_path:
         # Masks are typically expected to be PNG with alpha. Convert if needed.
