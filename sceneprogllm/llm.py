@@ -11,6 +11,13 @@ from .template import SceneProgTemplate
 from .image_helper import ImageHelper
 from .text2x import text2img, text2speech, text2embeddings
 
+# Max output tokens requested from Anthropic models (Claude requires this to be set).
+ANTHROPIC_MAX_TOKENS = 8192
+
+def _is_anthropic_model(model_name):
+    """Claude models (opus/sonnet/haiku) are served by the Anthropic API."""
+    return model_name.lower().startswith("claude")
+
 class ListResponse(BaseModel):
     response: list[str]
 
@@ -42,8 +49,25 @@ class LLM:
         self.system_desc = system_desc
         self.temperature = temperature
         self.seed = seed
-        self.api_key = api_key if api_key is not None else os.getenv("OPENAI_API_KEY")
-        self.model = ChatOpenAI(model_name=model_name, reasoning_effort=reasoning_effort, api_key=self.api_key, seed=self.seed, temperature=self.temperature)
+
+        # Pick the right backend + API key based on the model name. Claude models
+        # (claude-opus-*, claude-sonnet-*, claude-haiku-*) route to the Anthropic
+        # API; everything else (gpt-*, o*, ...) routes to OpenAI. The rest of the
+        # class is provider-agnostic since both expose the same LangChain interface.
+        if _is_anthropic_model(model_name):
+            from langchain_anthropic import ChatAnthropic
+            self.api_key = api_key if api_key is not None else os.getenv("ANTHROPIC_API_KEY")
+            # Anthropic rejects OpenAI-only knobs (reasoning_effort, seed) and 400s
+            # on sampling params (temperature) for the newer reasoning models, so we
+            # don't forward them here.
+            self.model = ChatAnthropic(
+                model=model_name,
+                api_key=self.api_key,
+                max_tokens=ANTHROPIC_MAX_TOKENS,
+            )
+        else:
+            self.api_key = api_key if api_key is not None else os.getenv("OPENAI_API_KEY")
+            self.model = ChatOpenAI(model_name=model_name, reasoning_effort=reasoning_effort, api_key=self.api_key, seed=self.seed, temperature=self.temperature)
 
     def set_system_desc(self, system_desc_keys=None):
         if '$' in self.system_desc and system_desc_keys is None:

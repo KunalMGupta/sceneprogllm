@@ -1,6 +1,6 @@
 # **SceneProgLLM**
 
-**SceneProgLLM** is a powerful and versatile Python package that wraps around LangChain's LLM interface to provide enhanced functionality, including support for text, code, JSON, list, pydantic, image, speech and embedding response formats along with image inputs. This project is built to support SceneProg projects and currently supports only OpenAI backend.
+**SceneProgLLM** is a powerful and versatile Python package that wraps around LangChain's LLM interface to provide enhanced functionality, including support for text, code, JSON, list, pydantic, image, speech and embedding response formats along with image inputs. This project is built to support SceneProg projects and supports both **OpenAI** (GPT) and **Anthropic** (Claude) backends — the right backend and API key are selected automatically based on the `model_name` you pass.
 
 ---
 
@@ -19,10 +19,15 @@ To install the package and its dependencies, use the following command:
 pip install sceneprogllm
 ```
 
-For proper usage, create a ```.env``` file in the package root with following fields:
+For proper usage, create a ```.env``` file in the package root with the keys for the backends you intend to use:
 ```text
 OPENAI_API_KEY=<Your OpenAI key>
+ANTHROPIC_API_KEY=<Your Anthropic key>
 ```
+
+The backend is chosen from `model_name`: any model starting with `claude` (e.g. `claude-opus-4-8`, `claude-sonnet-4-6`, `claude-haiku-4-5`) uses Anthropic with `ANTHROPIC_API_KEY`; everything else (e.g. `gpt-5-nano`) uses OpenAI with `OPENAI_API_KEY`. You can still pass a key explicitly via `api_key=...`.
+
+> Note: `image`, `speech` and `embedding` response formats are generated through OpenAI APIs regardless of `model_name`, since Anthropic does not provide equivalent endpoints. These always require `OPENAI_API_KEY`.
 
 ## **Getting Started**
 Importing the Package
@@ -175,6 +180,18 @@ llm = LLM(
 
 response = llm("What is the capital of France?", system_desc_keys={"description": "You are a funny AI assistant"})
 print(response)
+```
+
+14. **Using a Claude model**
+```python
+# Just change model_name — the Anthropic backend and ANTHROPIC_API_KEY are picked automatically.
+llm = LLM(model_name="claude-sonnet-4-6", response_format="text")
+response = llm("What is the capital of France?")
+print(response)
+
+# Structured outputs work the same across backends:
+llm = LLM(model_name="claude-opus-4-8", response_format="json", response_params={"capital": "str"})
+print(llm("What is the capital of India?"))
 ```
 
 
